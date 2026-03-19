@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhereAmI — GSD</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Oxanium:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #040d1a;
+    --surface: #071428;
+    --surface2: #0a1e3a;
+    --blue: #0a6cff;
+    --cyan: #00e5ff;
+    --neon: #00ffe7;
+    --green: #00ff88;
+    --red: #ff3366;
+    --yellow: #ffd600;
+    --text: #e0f0ff;
+    --muted: #4a6fa5;
+    --border: rgba(0,229,255,0.15);
+    --glow: 0 0 20px rgba(0,229,255,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Oxanium', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── CANVAS BG ─── */
+  #bg-canvas {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ─── SCREENS ─── */
+  .screen {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px;
+    transition: opacity .4s, transform .4s;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; transform: scale(.97); }
+
+  /* ─── SPLASH ─── */
+  #screen-splash {
+    background: radial-gradient(ellipse at 50% 30%, #061840 0%, var(--bg) 70%);
+  }
+
+  .logo-wrap {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .logo-gsd {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    letter-spacing: 6px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .logo-main {
+    font-family: 'Oxanium', monospace;
+    font-size: clamp(48px, 12vw, 96px);
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--cyan), var(--blue), var(--neon));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 30px rgba(0,229,255,0.5));
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+  .logo-sub {
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+
+  @keyframes pulse-glow {
+    0%,100% { filter: drop-shadow(0 0 20px rgba(0,229,255,.4)); }
+    50% { filter: drop-shadow(0 0 50px rgba(0,229,255,.8)); }
+  }
+
+  .tagline {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 48px;
+    text-align: center;
+    max-width: 360px;
+    line-height: 1.6;
+  }
+  .tagline span { color: var(--cyan); }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: 'Oxanium', monospace;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background .15s;
+  }
+  .btn:hover::after { background: rgba(255,255,255,.08); }
+  .btn:active { transform: scale(.97); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    color: #fff;
+    padding: 16px 40px;
+    font-size: 17px;
+    box-shadow: 0 0 30px rgba(0,108,255,.4);
+    width: 100%; max-width: 320px;
+    margin-bottom: 14px;
+  }
+  .btn-primary:hover { box-shadow: 0 0 50px rgba(0,229,255,.6); }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--cyan);
+    border: 1px solid var(--border);
+    padding: 14px 36px;
+    width: 100%; max-width: 320px;
+  }
+  .btn-secondary:hover { border-color: var(--cyan); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+
+  /* ─── MODE SELECT ─── */
+  #screen-modes {
+    background: var(--bg);
+  }
+
+  .screen-title {
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .modes-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .mode-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 24px;
+    cursor: pointer;
+    transition: all .25s;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mode-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent, var(--cyan)), transparent);
+    transform: scaleX(0);
+    transition: transform .3s;
+  }
+  .mode-card:hover::before { transform: scaleX(1); }
+  .mode-card:hover {
+    border-color: var(--accent, var(--cyan));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(0,0,0,.4);
+  }
+
+  .mode-card.arcade { --accent: #ffd600; }
+  .mode-card.competitive { --accent: #ff3366; }
+  .mode-card.explore { --accent: #00ff88; }
+
+  .mode-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(255,255,255,.2));
+  }
+  .mode-info { flex: 1; }
+  .mode-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .mode-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .mode-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--accent, var(--cyan));
+    color: var(--bg);
+    text-transform: uppercase;
+  }
+
+  /* ─── GAME SCREEN ─── */
+  #screen-game {
+    padding: 0;
+    justify-content: flex-start;
+    background: var(--bg);
+  }
+
+  .game-header {
+    width: 100%;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(4,13,26,.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    z-index: 20;
+  }
+
+  .round-badge {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .round-num {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--cyan);
+    margin-left: 4px;
+  }
+
+  .score-display {
+    margin-left: auto;
+    text-align: right;
+  }
+  .score-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; }
+  .score-val {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--yellow);
+    text-shadow: 0 0 20px rgba(255,214,0,.4);
+  }
+
+  .timer-bar-wrap {
+    width: 100%;
+    height: 4px;
+    background: var(--surface2);
+  }
+  .timer-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    transition: width .1s linear;
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  /* ─── MAP ─── */
+  .map-area {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    background: #071428;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  #world-svg {
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    transition: transform .3s;
+  }
+
+  .map-hint {
+    position: absolute;
+    bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(4,13,26,.85);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-size: 12px;
+    color: var(--muted);
+    pointer-events: none;
+    white-space: nowrap;
+    transition: opacity .3s;
+    backdrop-filter: blur(8px);
+  }
+
+  /* ─── AUDIO PANEL ─── */
+  .audio-panel {
+    padding: 20px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .audio-prompt {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  .audio-player {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+  }
+
+  .play-btn {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(0,229,255,.3);
+    transition: all .2s;
+  }
+  .play-btn:hover { box-shadow: 0 0 35px rgba(0,229,255,.6); transform: scale(1.05); }
+  .play-btn.playing { background: linear-gradient(135deg, var(--neon), var(--blue)); }
+
+  .waveform {
+    flex: 1;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    overflow: hidden;
+  }
+  .wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--muted);
+    transition: height .1s, background .3s;
+    animation: none;
+    flex-shrink: 0;
+  }
+  .wave-bar.active {
+    background: var(--cyan);
+    animation: wave 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes wave {
+    0% { transform: scaleY(0.3); }
+    100% { transform: scaleY(1); }
+  }
+
+  .audio-meta {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .audio-plays { color: var(--yellow); font-weight: 700; }
+
+  .btn-guess {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--green), #00ccaa);
+    color: var(--bg);
+    border: none;
+    border-radius: 14px;
+    font-family: 'Oxanium', monospace;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+    box-shadow: 0 0 25px rgba(0,255,136,.3);
+  }
+  .btn-guess:hover { box-shadow: 0 0 45px rgba(0,255,136,.5); transform: translateY(-1px); }
+  .btn-guess:disabled {
+    background: var(--surface2);
+    color: var(--muted);
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ─── RESULT PANEL ─── */
+  .result-overlay {
+    position: absolute; inset: 0;
+    background: rgba(4,13,26,.92);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    transition: opacity .3s;
+    backdrop-filter: blur(6px);
+  }
+  .result-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .result-score-ring {
+    width: 130px; height: 130px;
+    border-radius: 50%;
+    border: 4px solid var(--cyan);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    box-shadow: 0 0 40px rgba(0,229,255,.3), inset 0 0 30px rgba(0,229,255,.05);
+    margin-bottom: 20px;
+    animation: ring-pop .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes ring-pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .result-pts {
+    font-size: 38px;
+    font-weight: 800;
+    color: var(--yellow);
+    line-height: 1;
+  }
+  .result-pts-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  .result-dist {
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .result-dist strong { color: var(--cyan); }
+
+  .result-location {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .result-fact {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 300px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  .result-actions { display: flex; gap: 12px; width: 100%; max-width: 320px; }
+  .result-actions .btn { flex: 1; padding: 14px 10px; }
+
+  /* ─── PINS ON MAP ─── */
+  .map-pin {
+    position: absolute;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    border: 3px solid #fff;
+    box-shadow: 0 0 15px rgba(0,0,0,.5);
+    transition: all .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .map-pin.player { background: var(--blue); box-shadow: 0 0 15px var(--blue); }
+  .map-pin.answer { background: var(--green); box-shadow: 0 0 15px var(--green); }
+
+  .map-line {
+    position: absolute;
+    pointer-events: none;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  /* ─── RANKING ─── */
+  #screen-ranking {
+    background: var(--bg);
+    overflow-y: auto;
+  }
+
+  .ranking-header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .ranking-title {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--yellow), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .leaderboard {
+    width: 100%; max-width: 420px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+
+  .lb-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: all .2s;
+  }
+  .lb-row:hover { border-color: var(--cyan); transform: translateX(4px); }
+  .lb-row.me { border-color: var(--cyan); background: rgba(0,229,255,.05); }
+
+  .lb-rank {
+    font-size: 18px;
+    font-weight: 800;
+    min-width: 32px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .lb-rank.gold { color: #ffd600; text-shadow: 0 0 15px rgba(255,214,0,.5); }
+  .lb-rank.silver { color: #c0c0c0; }
+  .lb-rank.bronze { color: #cd7f32; }
+
+  .lb-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .lb-name { flex: 1; font-weight: 600; font-size: 15px; }
+  .lb-flag { font-size: 20px; }
+  .lb-score { font-weight: 800; font-size: 17px; color: var(--yellow); }
+
+  /* ─── NAV BAR ─── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 64px;
+    background: rgba(7,20,40,.95);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-item {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 10px;
+    transition: all .2s;
+    color: var(--muted);
+  }
+  .nav-item:hover, .nav-item.active { color: var(--cyan); }
+  .nav-item.active .nav-icon {
+    filter: drop-shadow(0 0 6px var(--cyan));
+  }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ─── UTILS ─── */
+  .flex-col-center { display: flex; flex-direction: column; align-items: center; }
+  .mt-auto { margin-top: auto; }
+  .w-full { width: 100%; }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    top: 80px; left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: var(--surface2);
+    border: 1px solid var(--cyan);
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-size: 14px;
+    color: var(--cyan);
+    z-index: 200;
+    opacity: 0;
+    transition: all .3s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ─── PROFILE SCREEN ─── */
+  #screen-profile {
+    background: var(--bg);
+    padding-bottom: 80px;
+  }
+  .profile-hero {
+    width: 100%;
+    padding: 40px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,108,255,.2) 0%, transparent 70%);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .avatar-ring {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    border: 3px solid var(--cyan);
+    box-shadow: 0 0 30px rgba(0,229,255,.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px;
+    background: var(--surface2);
+    margin-bottom: 14px;
+  }
+  .profile-name { font-size: 22px; font-weight: 700; }
+  .profile-handle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .stats-row {
+    display: flex; gap: 30px; margin-top: 20px;
+  }
+  .stat-block { text-align: center; }
+  .stat-val { font-size: 24px; font-weight: 800; color: var(--cyan); }
+  .stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  .section-header {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding: 0 20px;
+    width: 100%;
+  }
+  .achievements {
+    display: flex; gap: 10px; overflow-x: auto; padding: 4px 20px 4px;
+    width: 100%;
+    scrollbar-width: none;
+  }
+  .achievement {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    flex-shrink: 0;
+    width: 100px;
+    text-align: center;
+  }
+  .achievement-icon { font-size: 28px; margin-bottom: 6px; }
+  .achievement-name { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+  /* ─── GAME OVER ─── */
+  #screen-gameover {
+    background: radial-gradient(ellipse at 50% 30%, #0d1f40 0%, var(--bg) 70%);
+  }
+  .gameover-title {
+    font-size: 42px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--yellow), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .gameover-score-big {
+    font-size: 72px;
+    font-weight: 800;
+    color: var(--yellow);
+    text-shadow: 0 0 40px rgba(255,214,0,.5);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .gameover-label { font-size: 12px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 32px; }
+
+  .gameover-breakdown {
+    width: 100%; max-width: 320px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-val { font-weight: 700; color: var(--cyan); }
+
+  /* Scroll fix for profile/ranking */
+  #screen-ranking, #screen-profile {
+    overflow-y: auto;
+    padding-bottom: 80px;
+    justify-content: flex-start;
+    padding-top: 40px;
+  }
+
+  /* ─── PARTICLES CANVAS ─── */
+  #confetti-canvas {
+    position: fixed; inset: 0;
+    z-index: 150;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  #confetti-canvas.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<canvas id="confetti-canvas"></canvas>
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 1 — SPLASH
+═══════════════════════════════════════════════ -->
+<div class="screen" id="screen-splash">
+  <div class="logo-wrap">
+    <div class="logo-gsd">GSD · Game Sound Destiny</div>
+    <div class="logo-main">WAI</div>
+    <div class="logo-sub">Where Am I?</div>
+  </div>
+  <p class="tagline">Escucha el acento.<br><span>Conquista el mundo.</span></p>
+  <div class="flex-col-center w-full" style="max-width:320px">
+    <button class="btn btn-primary" onclick="goTo('screen-modes')">
+      🎮 Jugar ahora
+    </button>
+    <button class="btn btn-secondary" onclick="goTo('screen-profile')">
+      👤 Mi perfil
+    </button>
+    <button class="btn btn-ghost" onclick="goTo('screen-ranking')">
+      🏆 Ranking global
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 2 — SELECCIÓN DE MODO
+═══════════════════════════════════════════════ -->
+<div class="screen hidden" id="screen-modes">
+  <p class="screen-title">Elige tu modo</p>
+  <div class="modes-grid">
+
+    <div class="mode-card arcade" onclick="startGame('arcade')">
+      <div class="mode-icon">🎯</div>
+      <div class="mode-info">
+        <div class="mode-name">Arcade</div>
+        <div class="mode-desc">Tú vs máquina · rondas progresivas · 5 vidas</div>
+      </div>
+      <div class="mode-badge" style="background:var(--yellow)">CLÁSICO</div>
+    </div>
+
+    <div class="mode-card competitive" onclick="showToast('🏆 Modo competitivo — ¡próximamente!')">
+      <div class="mode-icon">⚔️</div>
+      <div class="mode-info">
+        <div class="mode-name">Competitivo</div>
+        <div class="mode-desc">1v1 o salas · ELO · ranking global</div>
+      </div>
+      <div class="mode-badge" style="background:var(--red)">PRONTO</div>
+    </div>
+
+    <div class="mode-card explore" onclick="startGame('explore')">
+      <div class="mode-icon">🌍</div>
+      <div class="mode-info">
+        <div class="mode-name">Exploración</div>
+        <div class="mode-desc">Sin presión · aprende culturas · sin límite de tiempo</div>
+      </div>
+      <div class="mode-badge" style="background:var(--green)">APRENDE</div>
+    </div>
+
+  </div>
+  <button class="btn btn-ghost" style="margin-top:24px" onclick="goTo('screen-splash')">← Volver</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 3 — JUEGO
+═══════════════════════════════════════════════ -->
+<div class="screen hidden" id="screen-game" style="padding:0">
+  <div class="game-header">
+    <div>
+      <div class="round-badge">RONDA <span class="round-num" id="round-num">1</span>/5</div>
+    </div>
+    <div style="display:flex;gap:6px;margin:0 auto">
+      <span id="lives-display">❤️❤️❤️❤️❤️</span>
+    </div>
+    <div class="score-display">
+      <div class="score-label">PUNTOS</div>
+      <div class="score-val" id="score-display">0</div>
+    </div>
+  </div>
+  <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar" style="width:100%"></div></div>
+
+  <div class="map-area" id="map-area">
+    <!-- SVG world map simplified -->
+    <svg id="world-svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" onclick="onMapClick(event)">
+      <defs>
+        <radialGradient id="bg-grad" cx="50%" cy="50%" r="70%">
+          <stop offset="0%" stop-color="#071e40"/>
+          <stop offset="100%" stop-color="#030d1a"/>
+        </radialGradient>
+        <filter id="glow-filter">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <!-- Ocean background -->
+      <rect width="1000" height="500" fill="url(#bg-grad)"/>
+      <!-- Grid lines -->
+      <g stroke="rgba(0,229,255,0.06)" stroke-width="0.5">
+        <line x1="0" y1="125" x2="1000" y2="125"/>
+        <line x1="0" y1="250" x2="1000" y2="250"/>
+        <line x1="0" y1="375" x2="1000" y2="375"/>
+        <line x1="250" y1="0" x2="250" y2="500"/>
+        <line x1="500" y1="0" x2="500" y2="500"/>
+        <line x1="750" y1="0" x2="750" y2="500"/>
+      </g>
+      <!-- Equator -->
+      <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(0,229,255,0.15)" stroke-width="1" stroke-dasharray="4,6"/>
+
+      <!-- CONTINENTS simplified paths -->
+      <!-- North America -->
+      <path d="M 80 60 L 170 50 L 200 80 L 220 130 L 200 160 L 190 200 L 160 220 L 130 200 L 100 170 L 80 140 Z" 
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1" class="continent" data-name="América del Norte"/>
+      <!-- Central America -->
+      <path d="M 160 220 L 180 240 L 170 260 L 155 255 L 150 235 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- South America -->
+      <path d="M 170 280 L 220 270 L 255 290 L 265 360 L 240 430 L 200 440 L 170 400 L 155 340 L 160 300 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1" class="continent" data-name="América del Sur"/>
+      <!-- Europe -->
+      <path d="M 440 70 L 510 60 L 530 90 L 510 110 L 490 130 L 460 130 L 440 110 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1" class="continent" data-name="Europa"/>
+      <!-- Scandinavia -->
+      <path d="M 470 40 L 490 30 L 510 50 L 490 65 L 470 60 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- UK -->
+      <path d="M 430 80 L 445 70 L 450 90 L 435 95 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- Africa -->
+      <path d="M 460 160 L 520 150 L 560 180 L 570 260 L 545 360 L 510 400 L 480 380 L 455 320 L 445 240 L 450 190 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1" class="continent" data-name="África"/>
+      <!-- Russia/Central Asia -->
+      <path d="M 520 50 L 750 40 L 790 80 L 760 120 L 680 130 L 580 120 L 530 100 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1" class="continent" data-name="Asia"/>
+      <!-- Middle East -->
+      <path d="M 555 140 L 610 130 L 640 160 L 620 190 L 575 185 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- India -->
+      <path d="M 650 150 L 700 145 L 720 200 L 695 260 L 660 255 L 640 210 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1" class="continent" data-name="Asia del Sur"/>
+      <!-- Southeast Asia -->
+      <path d="M 720 160 L 800 155 L 820 200 L 780 220 L 740 210 L 720 190 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- China/East Asia -->
+      <path d="M 740 90 L 860 85 L 880 140 L 820 160 L 760 155 L 730 130 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- Japan -->
+      <path d="M 875 100 L 895 95 L 900 115 L 882 120 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- Australia -->
+      <path d="M 780 310 L 870 300 L 900 350 L 880 400 L 820 420 L 770 390 L 755 350 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1" class="continent" data-name="Oceanía"/>
+      <!-- New Zealand -->
+      <path d="M 920 390 L 935 380 L 940 400 L 928 410 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- Greenland -->
+      <path d="M 230 20 L 280 15 L 290 50 L 260 60 L 230 45 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+      <!-- Antarctica -->
+      <path d="M 100 470 L 900 470 L 920 500 L 80 500 Z"
+        fill="#0d2a4a" stroke="#0a4a7a" stroke-width="1"/>
+
+      <!-- City dots -->
+      <g fill="rgba(0,229,255,0.3)" filter="url(#glow-filter)">
+        <circle cx="145" cy="155" r="2"/> <!-- NYC -->
+        <circle cx="120" cy="130" r="2"/> <!-- Chicago -->
+        <circle cx="95" cy="155" r="2"/> <!-- LA -->
+        <circle cx="487" cy="97" r="2"/> <!-- London -->
+        <circle cx="502" cy="93" r="2"/> <!-- Paris -->
+        <circle cx="515" cy="87" r="2"/> <!-- Berlin -->
+        <circle cx="523" cy="100" r="2"/> <!-- Rome -->
+        <circle cx="497" cy="103" r="2"/> <!-- Madrid -->
+        <circle cx="540" cy="110" r="2"/> <!-- Istanbul -->
+        <circle cx="588" cy="147" r="2"/> <!-- Dubai -->
+        <circle cx="678" cy="185" r="2"/> <!-- Mumbai -->
+        <circle cx="810" cy="125" r="2"/> <!-- Beijing -->
+        <circle cx="858" cy="125" r="2"/> <!-- Tokyo -->
+        <circle cx="815" cy="145" r="2"/> <!-- Shanghai -->
+        <circle cx="835" cy="350" r="2"/> <!-- Sydney -->
+        <circle cx="210" cy="310" r="2"/> <!-- Buenos Aires -->
+        <circle cx="195" cy="285" r="2"/> <!-- São Paulo -->
+      </g>
+
+      <!-- Hover highlight continents -->
+      <style>
+        .continent { transition: fill .2s; }
+        .continent:hover { fill: #143356; cursor: crosshair; }
+      </style>
+
+      <!-- Player pin (hidden initially) -->
+      <g id="player-pin" opacity="0" style="transition: opacity .3s">
+        <circle id="pin-circle" cx="0" cy="0" r="10" fill="var(--blue)" stroke="white" stroke-width="2.5" filter="url(#glow-filter)"/>
+        <circle id="pin-pulse" cx="0" cy="0" r="10" fill="none" stroke="var(--cyan)" stroke-width="1.5">
+          <animate attributeName="r" from="10" to="22" dur="1.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" from="0.8" to="0" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+      </g>
+
+      <!-- Answer pin (hidden initially) -->
+      <g id="answer-pin" opacity="0" style="transition: opacity .4s">
+        <circle id="ans-circle" cx="0" cy="0" r="10" fill="var(--green)" stroke="white" stroke-width="2.5" filter="url(#glow-filter)"/>
+        <circle cx="0" cy="0" r="4" fill="white" id="ans-dot"/>
+      </g>
+
+      <!-- Connection line -->
+      <line id="connect-line" x1="0" y1="0" x2="0" y2="0" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="5,4" opacity="0" style="transition: opacity .4s"/>
+    </svg>
+
+    <div class="map-hint" id="map-hint">Toca el mapa para marcar tu respuesta</div>
+    <div class="result-overlay hidden" id="result-overlay">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <div class="audio-panel">
+    <p class="audio-prompt">¿Dónde se habla así?</p>
+    <div class="audio-player">
+      <button class="play-btn" id="play-btn" onclick="toggleAudio()">▶</button>
+      <div class="waveform" id="waveform"></div>
+      <div class="audio-meta">
+        <div>5s</div>
+        <div>x<span class="audio-plays" id="plays-count">0</span></div>
+      </div>
+    </div>
+    <button class="btn-guess" id="btn-guess" disabled onclick="submitGuess()">
+      📍 Confirmar ubicación
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 4 — GAME OVER
+═══════════════════════════════════════════════ -->
+<div class="screen hidden" id="screen-gameover">
+  <div class="flex-col-center" style="text-align:center">
+    <div class="gameover-title">¡Partida terminada!</div>
+    <div class="gameover-score-big" id="final-score-display">0</div>
+    <div class="gameover-label">PUNTOS TOTALES</div>
+
+    <div class="gameover-breakdown" id="breakdown-table">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="flex-col-center w-full" style="max-width:320px; gap:12px">
+      <button class="btn btn-primary" onclick="startGame('arcade')">🔄 Jugar de nuevo</button>
+      <button class="btn btn-secondary" onclick="goTo('screen-modes')">← Cambiar modo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 5 — RANKING
+═══════════════════════════════════════════════ -->
+<div class="screen hidden" id="screen-ranking">
+  <div class="ranking-header">
+    <div class="screen-title">Ranking Global</div>
+    <div class="ranking-title">🏆 Top Jugadores</div>
+  </div>
+  <div class="leaderboard" id="leaderboard">
+    <!-- filled by JS -->
+  </div>
+  <button class="btn btn-ghost" style="margin-top:24px" onclick="goTo('screen-splash')">← Inicio</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 6 — PERFIL
+═══════════════════════════════════════════════ -->
+<div class="screen hidden" id="screen-profile">
+  <div class="profile-hero">
+    <div class="avatar-ring">🎧</div>
+    <div class="profile-name">AcentMaster</div>
+    <div class="profile-handle">@acent_master · Liga Oro 🥇</div>
+    <div class="stats-row">
+      <div class="stat-block"><div class="stat-val">1,240</div><div class="stat-lbl">Puntos</div></div>
+      <div class="stat-block"><div class="stat-val">48</div><div class="stat-lbl">Partidas</div></div>
+      <div class="stat-block"><div class="stat-val">71%</div><div class="stat-lbl">Precisión</div></div>
+    </div>
+  </div>
+  <div class="section-header">Logros</div>
+  <div class="achievements">
+    <div class="achievement"><div class="achievement-icon">🌍</div><div class="achievement-name">Explorador Global</div></div>
+    <div class="achievement"><div class="achievement-icon">🔥</div><div class="achievement-name">Racha x10</div></div>
+    <div class="achievement"><div class="achievement-icon">🎯</div><div class="achievement-name">Tiro Perfecto</div></div>
+    <div class="achievement"><div class="achievement-icon">🏆</div><div class="achievement-name">Top 100</div></div>
+    <div class="achievement"><div class="achievement-icon">🎵</div><div class="achievement-name">Oído fino</div></div>
+    <div class="achievement"><div class="achievement-icon">⚡</div><div class="achievement-name">Ultrarrápido</div></div>
+  </div>
+  <button class="btn btn-ghost" style="margin-top:32px" onclick="goTo('screen-splash')">← Inicio</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     BOTTOM NAV (visible on main screens)
+═══════════════════════════════════════════════ -->
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
+  <div class="nav-item active" onclick="goTo('screen-modes')">
+    <span class="nav-icon">🎮</span>
+    <span class="nav-label">Jugar</span>
+  </div>
+  <div class="nav-item" onclick="goTo('screen-ranking')">
+    <span class="nav-icon">🏆</span>
+    <span class="nav-label">Ranking</span>
+  </div>
+  <div class="nav-item" onclick="goTo('screen-profile')">
+    <span class="nav-icon">👤</span>
+    <span class="nav-label">Perfil</span>
+  </div>
+</nav>
+
+<script>
+// ─────────────────────────────────────────────
+// BG CANVAS — animated particles
+// ─────────────────────────────────────────────
+(function() {
+  const c = document.getElementById('bg-canvas');
+  const ctx = c.getContext('2d');
+  let W, H, stars = [];
+  function resize() {
+    W = c.width = innerWidth;
+    H = c.height = innerHeight;
+    stars = Array.from({length: 80}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      r: Math.random()*1.5+.3,
+      o: Math.random(), s: (Math.random()-.5)*.2
+    }));
+  }
+  resize(); addEventListener('resize', resize);
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    stars.forEach(s => {
+      s.o += s.s;
+      if (s.o < 0 || s.o > 1) s.s *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(0,200,255,${s.o*0.4})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─────────────────────────────────────────────
+// SCREEN ROUTING
+// ─────────────────────────────────────────────
+const nav = document.getElementById('bottom-nav');
+const noNavScreens = ['screen-splash', 'screen-game', 'screen-gameover'];
+
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  nav.style.display = noNavScreens.includes(id) ? 'none' : 'flex';
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function showToast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ─────────────────────────────────────────────
+// GAME DATA
+// ─────────────────────────────────────────────
+const accents = [
+  { id:1, label:"Buenos Aires, Argentina 🇦🇷", country:"Argentina", region:"Cono Sur", x:210, y:340,
+    diff:1, desc:"El Rioplatense porteño, famoso por su entonación 'italiana' y el voseo. Buenos Aires absorbió millones de inmigrantes italianos y españoles.", emoji:"🥩" },
+  { id:2, label:"Sevilla, España 🇪🇸", country:"España", region:"Andalucía", x:468, y:115,
+    diff:1, desc:"El andaluz sevillano con seseo característico y aspiración de la 's'. Considerado uno de los acentos más musicales del español.", emoji:"💃" },
+  { id:3, label:"Ciudad de México 🇲🇽", country:"México", region:"América Central", x:138, y:195,
+    diff:1, desc:"El acento del Altiplano central mexicano, con entonación suave y pronunciación clara de todas las vocales. Muy influenciado por las lenguas indígenas.", emoji:"🌮" },
+  { id:4, label:"Bogotá, Colombia 🇨🇴", country:"Colombia", region:"Andes", x:188, y:255,
+    diff:2, desc:"El acento 'neutro' de los Andes colombianos. A menudo descrito como el español más claro de América Latina, muy valorado en medios de comunicación.", emoji:"☕" },
+  { id:5, label:"Recife, Brasil 🇧🇷", country:"Brasil", region:"Nordeste", x:265, y:290,
+    diff:2, desc:"El Nordestino brasileño, con su ritmo y entonación únicos, influenciado por el tupi-guaraní y el portugués arcaico. Muy diferente al carioca.", emoji:"🎭" },
+  { id:6, label:"Lagos, Nigeria 🇳🇬", country:"Nigeria", region:"África Occidental", x:495, y:260,
+    diff:2, desc:"El inglés nigeriano del sur, con tonos marcados por influencias del yoruba. Lagos es una de las ciudades más vibrantes de África.", emoji:"🥁" },
+  { id:7, label:"Mumbai, India 🇮🇳", country:"India", region:"Maharashtra", x:678, y:205,
+    diff:3, desc:"El inglés de Mumbai con la cadencia única del Maharashtra. La ciudad del Bollywood ha desarrollado un acento internacional reconocible mundialmente.", emoji:"🎬" },
+  { id:8, label:"Estambul, Turquía 🇹🇷", country:"Turquía", region:"Bósforo", x:548, y:113,
+    diff:3, desc:"El turco de Estambul, lengua aglutinante con armonía vocálica, que une Europa y Asia. Ciudad puente entre dos continentes y culturas.", emoji:"🕌" },
+  { id:9, label:"Tokio, Japón 🇯🇵", country:"Japón", region:"Kantō", x:858, y:120,
+    diff:3, desc:"El japonés estándar (Hyojungo) basado en el dialecto de Tokio. Famoso por su sistema de honoríficos y las diferencias de registro entre habla formal e informal.", emoji:"🗼" },
+  { id:10, label:"Moscú, Rusia 🇷🇺", country:"Rusia", region:"Europa del Este", x:570, y:72,
+    diff:4, desc:"El ruso moscovita, con su pronunciación 'okanie' (pronunciar la 'o' átona como 'a'). Base del ruso estándar literario.", emoji:"🏛️" },
+];
+
+// ─────────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────────
+let state = {
+  mode: 'arcade', round: 0, maxRounds: 5,
+  score: 0, lives: 5,
+  currentAccent: null, playerPin: null,
+  timerInterval: null, timeLeft: 30,
+  playsCount: 0, isPlaying: false,
+  roundScores: []
+};
+
+function startGame(mode) {
+  state.mode = mode;
+  state.round = 0;
+  state.score = 0;
+  state.lives = 5;
+  state.roundScores = [];
+  goTo('screen-game');
+  nextRound();
+}
+
+function nextRound() {
+  state.round++;
+  if (state.round > state.maxRounds) { endGame(); return; }
+
+  // Pick random accent
+  const pool = accents.filter(a => a.diff <= Math.ceil(state.round / 2) + 1);
+  state.currentAccent = pool[Math.floor(Math.random() * pool.length)];
+  state.playerPin = null;
+  state.playsCount = 0;
+  state.isPlaying = false;
+
+  // Reset UI
+  document.getElementById('round-num').textContent = state.round;
+  document.getElementById('score-display').textContent = state.score.toLocaleString();
+  document.getElementById('lives-display').textContent = '❤️'.repeat(state.lives) + '🖤'.repeat(5 - state.lives);
+  document.getElementById('btn-guess').disabled = true;
+  document.getElementById('plays-count').textContent = '0';
+  document.getElementById('play-btn').textContent = '▶';
+  document.getElementById('play-btn').classList.remove('playing');
+  document.getElementById('map-hint').style.opacity = '1';
+  document.getElementById('result-overlay').classList.add('hidden');
+
+  // Reset pins
+  document.getElementById('player-pin').setAttribute('opacity', '0');
+  document.getElementById('answer-pin').setAttribute('opacity', '0');
+  document.getElementById('connect-line').setAttribute('opacity', '0');
+
+  // Waveform
+  buildWaveform();
+
+  // Timer
+  clearInterval(state.timerInterval);
+  const maxTime = state.mode === 'explore' ? 999 : Math.max(15, 30 - state.round * 2);
+  state.timeLeft = maxTime;
+  if (state.mode !== 'explore') {
+    state.timerInterval = setInterval(() => {
+      state.timeLeft--;
+      const pct = Math.max(0, state.timeLeft / maxTime * 100);
+      document.getElementById('timer-bar').style.width = pct + '%';
+      document.getElementById('timer-bar').style.background =
+        pct > 50 ? 'linear-gradient(90deg, var(--blue), var(--cyan))' :
+        pct > 20 ? 'linear-gradient(90deg, var(--yellow), orange)' :
+        'linear-gradient(90deg, var(--red), orange)';
+      if (state.timeLeft <= 0) {
+        clearInterval(state.timerInterval);
+        if (!state.playerPin) submitGuess(true);
+      }
+    }, 1000);
+  }
+}
+
+function buildWaveform() {
+  const wf = document.getElementById('waveform');
+  wf.innerHTML = '';
+  const bars = Math.floor(wf.offsetWidth / 5) || 40;
+  for (let i = 0; i < bars; i++) {
+    const b = document.createElement('div');
+    b.className = 'wave-bar';
+    const h = 6 + Math.random() * 28;
+    b.style.height = h + 'px';
+    b.style.animationDelay = (i * 0.04) + 's';
+    wf.appendChild(b);
+  }
+}
+
+function toggleAudio() {
+  state.isPlaying = !state.isPlaying;
+  const btn = document.getElementById('play-btn');
+  const bars = document.querySelectorAll('.wave-bar');
+  if (state.isPlaying) {
+    btn.textContent = '⏸';
+    btn.classList.add('playing');
+    bars.forEach((b, i) => {
+      setTimeout(() => b.classList.add('active'), i * 20);
+    });
+    state.playsCount++;
+    document.getElementById('plays-count').textContent = state.playsCount;
+    // Auto-stop after "clip duration"
+    setTimeout(() => {
+      if (state.isPlaying) toggleAudio();
+    }, 5000);
+  } else {
+    btn.textContent = '▶';
+    btn.classList.remove('playing');
+    bars.forEach(b => b.classList.remove('active'));
+  }
+}
+
+function onMapClick(event) {
+  const svg = document.getElementById('world-svg');
+  const rect = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+
+  const scaleX = vb.width / rect.width;
+  const scaleY = vb.height / rect.height;
+
+  const svgX = (event.clientX - rect.left) * scaleX;
+  const svgY = (event.clientY - rect.top) * scaleY;
+
+  state.playerPin = { x: svgX, y: svgY };
+
+  const pin = document.getElementById('player-pin');
+  document.getElementById('pin-circle').setAttribute('cx', svgX);
+  document.getElementById('pin-circle').setAttribute('cy', svgY);
+  pin.querySelectorAll('circle').forEach(c => {
+    c.setAttribute('cx', svgX);
+    c.setAttribute('cy', svgY);
+  });
+  pin.setAttribute('opacity', '1');
+
+  document.getElementById('btn-guess').disabled = false;
+  document.getElementById('map-hint').style.opacity = '0';
+}
+
+function calcDistance(x1, y1, x2, y2) {
+  // Approximate km from SVG coordinates (rough conversion for fun)
+  const dx = (x2 - x1) * 35; // ~35km per unit
+  const dy = (y2 - y1) * 35;
+  return Math.round(Math.sqrt(dx * dx + dy * dy));
+}
+
+function calcPoints(km, timeLeft, maxTime) {
+  const distFactor = Math.max(0, 1 - km / 15000);
+  const timeFactor = timeLeft / maxTime;
+  return Math.round(distFactor * 4500 + timeFactor * 500);
+}
+
+function submitGuess(timeout = false) {
+  clearInterval(state.timerInterval);
+
+  const acc = state.currentAccent;
+  let km, pts;
+
+  if (timeout || !state.playerPin) {
+    km = 15000; pts = 0;
+    state.playerPin = { x: acc.x + 150, y: acc.y + 100 };
+  } else {
+    km = calcDistance(state.playerPin.x, state.playerPin.y, acc.x, acc.y);
+    const maxTime = Math.max(15, 30 - state.round * 2);
+    pts = calcPoints(km, state.timeLeft, maxTime);
+  }
+
+  state.score += pts;
+  state.roundScores.push({ round: state.round, location: acc.label, km, pts });
+  if (pts === 0) state.lives--;
+
+  // Show answer pin
+  const ansPinGroup = document.getElementById('answer-pin');
+  document.getElementById('ans-circle').setAttribute('cx', acc.x);
+  document.getElementById('ans-circle').setAttribute('cy', acc.y);
+  document.getElementById('ans-dot').setAttribute('cx', acc.x);
+  document.getElementById('ans-dot').setAttribute('cy', acc.y);
+  ansPinGroup.setAttribute('opacity', '1');
+
+  // Connection line
+  const line = document.getElementById('connect-line');
+  line.setAttribute('x1', state.playerPin.x);
+  line.setAttribute('y1', state.playerPin.y);
+  line.setAttribute('x2', acc.x);
+  line.setAttribute('y2', acc.y);
+  line.setAttribute('opacity', '1');
+
+  // Result overlay
+  showResult(km, pts, acc);
+
+  if (state.lives <= 0) {
+    setTimeout(() => endGame(), 3000);
+  }
+}
+
+function showResult(km, pts, acc) {
+  const overlay = document.getElementById('result-overlay');
+  const isGreat = km < 500;
+  const isGood = km < 2000;
+  const color = isGreat ? 'var(--green)' : isGood ? 'var(--yellow)' : 'var(--red)';
+  const emoji = isGreat ? '🎯' : isGood ? '🌍' : '📍';
+  const feedback = isGreat ? '¡Perfecto!' : isGood ? '¡Bien!' : 'Lejos...';
+
+  overlay.innerHTML = `
+    <div style="text-align:center">
+      <div style="font-size:12px;letter-spacing:3px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">${emoji} ${feedback}</div>
+      <div class="result-score-ring" style="border-color:${color}; box-shadow: 0 0 40px ${color}40, inset 0 0 30px ${color}0a">
+        <div class="result-pts" style="color:${pts>0?'var(--yellow)':'var(--red)'}">${pts}</div>
+        <div class="result-pts-label">PUNTOS</div>
+      </div>
+      <div class="result-dist"><strong style="color:${color}">${km.toLocaleString()} km</strong> del objetivo</div>
+      <div class="result-location" style="margin-top:10px">${acc.emoji} ${acc.label}</div>
+      <div class="result-fact">${acc.desc}</div>
+      <div class="result-actions">
+        <button class="btn btn-secondary" onclick="goTo('screen-splash')">🏠</button>
+        <button class="btn btn-primary" onclick="nextRound()" style="flex:2">${state.round < state.maxRounds ? '→ Siguiente ronda' : '🏁 Ver resultados'}</button>
+      </div>
+    </div>
+  `;
+  overlay.classList.remove('hidden');
+
+  // Confetti on great guess
+  if (isGreat) triggerConfetti();
+}
+
+function endGame() {
+  const breakdown = state.roundScores.map(r => `
+    <div class="breakdown-row">
+      <span>Ronda ${r.round} — ${r.location}</span>
+      <span class="breakdown-val">${r.pts} pts</span>
+    </div>
+  `).join('');
+
+  document.getElementById('final-score-display').textContent = state.score.toLocaleString();
+  document.getElementById('breakdown-table').innerHTML = breakdown + `
+    <div class="breakdown-row" style="background:rgba(0,229,255,.05)">
+      <strong>TOTAL</strong>
+      <strong class="breakdown-val" style="color:var(--yellow)">${state.score.toLocaleString()}</strong>
+    </div>
+  `;
+  goTo('screen-gameover');
+  triggerConfetti();
+}
+
+// ─────────────────────────────────────────────
+// LEADERBOARD
+// ─────────────────────────────────────────────
+const lbData = [
+  { rank:1, name:'PhonXavier', flag:'🇫🇷', score:48250, avatar:'🧠' },
+  { rank:2, name:'AccentQueen', flag:'🇧🇷', score:45100, avatar:'👑' },
+  { rank:3, name:'SoundHunter', flag:'🇺🇸', score:42800, avatar:'🦅' },
+  { rank:4, name:'LinguaKing', flag:'🇩🇪', score:39500, avatar:'🎩' },
+  { rank:5, name:'VoiceTracer', flag:'🇯🇵', score:37200, avatar:'🎌' },
+  { rank:6, name:'AcentMaster', flag:'🇪🇸', score:35400, avatar:'🎧', me: true },
+  { rank:7, name:'ToneDetect', flag:'🇮🇳', score:33100, avatar:'🎵' },
+  { rank:8, name:'GlobeTalker', flag:'🇦🇺', score:29800, avatar:'🌏' },
+];
+
+function buildLeaderboard() {
+  const el = document.getElementById('leaderboard');
+  const medals = ['gold','silver','bronze'];
+  el.innerHTML = lbData.map(p => `
+    <div class="lb-row ${p.me ? 'me' : ''}">
+      <div class="lb-rank ${medals[p.rank-1]||''}">${p.rank <= 3 ? ['🥇','🥈','🥉'][p.rank-1] : p.rank}</div>
+      <div class="lb-avatar">${p.avatar}</div>
+      <div class="lb-name">${p.name} ${p.me ? '<span style="color:var(--cyan);font-size:11px">· Tú</span>' : ''}</div>
+      <div class="lb-flag">${p.flag}</div>
+      <div class="lb-score">${p.score.toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+buildLeaderboard();
+
+// ─────────────────────────────────────────────
+// CONFETTI
+// ─────────────────────────────────────────────
+function triggerConfetti() {
+  const c = document.getElementById('confetti-canvas');
+  const ctx = c.getContext('2d');
+  c.width = innerWidth; c.height = innerHeight;
+  c.classList.add('show');
+  const particles = Array.from({length:120}, () => ({
+    x: Math.random() * innerWidth,
+    y: -10,
+    vx: (Math.random()-0.5)*6,
+    vy: Math.random()*4+2,
+    color: ['#00e5ff','#ffd600','#00ff88','#ff3366','#ffffff'][Math.floor(Math.random()*5)],
+    size: Math.random()*6+3,
+    rotation: Math.random()*360,
+    rotSpeed: (Math.random()-0.5)*10
+  }));
+  let frame = 0;
+  function drawConf() {
+    ctx.clearRect(0,0,c.width,c.height);
+    let alive = false;
+    particles.forEach(p => {
+      if (p.y < c.height + 20) { alive = true; }
+      p.x += p.vx; p.y += p.vy; p.vy += 0.1;
+      p.rotation += p.rotSpeed;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI/180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+      ctx.restore();
+    });
+    if (alive && frame < 150) { frame++; requestAnimationFrame(drawConf); }
+    else { ctx.clearRect(0,0,c.width,c.height); c.classList.remove('show'); }
+  }
+  drawConf();
+}
+</script>
+</body>
+</html>
