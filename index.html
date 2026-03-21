@@ -786,8 +786,8 @@ const LOCAL_AUDIOS=[
   {id:13,name:'Roma',country:'Italia',region:'Lazio',lang:'it',diff:2,emoji:'🍕',tags:['romano','relajado'],synth:'sevilla'},
   {id:14,name:'Pekín',country:'China',region:'Hebei',lang:'zh',diff:4,emoji:'🏯',tags:['érhua','pǔtōnghuà'],synth:'tokyo'},
   {id:15,name:'Lagos',country:'Nigeria',region:'Sur',lang:'en',diff:2,emoji:'🥁',tags:['yoruba','tonal'],synth:'mumbai'},
-];*/
-let DB_AUDIOS=[...LOCAL_AUDIOS],libFilter='',libPlayingId=null;
+];
+let DB_AUDIOS=[...LOCAL_AUDIOS],libFilter='',libPlayingId=null;*/
 
 function initLib(){renderLibCards(DB_AUDIOS);}
 function filterLib(){libFilter=document.getElementById('lib-search').value;renderLibCards(DB_AUDIOS);}
